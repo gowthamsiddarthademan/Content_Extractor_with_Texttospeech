@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Extractor</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Content Extractor</h1>
+        <form action="/extract" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file">Upload a PDF or PPT:</label>
+                <input type="file" id="file" name="file" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="url">Or enter a website URL:</label>
+                <input type="text" id="url" name="url" placeholder="https://example.com" class="form-control">
+            </div>
+            <button type="submit" class="btn">Extract Content</button>
+        </form>
+
+        <div id="content-display" style="margin-top: 20px; white-space: pre-wrap;"></div>
+        
+        <form id="talk-form" method="POST">
+            <textarea id="content" name="content" style="width:100%; height: 150px;" readonly></textarea><br>
+            <button type="submit" class="btn">Speak Content</button>
+        </form>
+    </div>
+
+    <script>
+        let contentText = ""; // To store the entire content
+        let wordsArray = []; // To store each word of content
+        let highlightedIndex = -1; // To track the current word index
+
+        // Handle word highlighting
+        function highlightText(index) {
+            const words = contentText.split(/\s+/); // Split by spaces to get individual words
+            let highlightedText = words.map((word, i) => {
+                if (i === index) {
+                    return `<span style="background-color: yellow;">${word}</span>`;
+                }
+                return word;
+            }).join(" ");
+            document.getElementById('content-display').innerHTML = highlightedText;
+        }
+
+        // Speech synthesis API for browser
+        function speakContent(content) {
+            const speech = new SpeechSynthesisUtterance();
+            speech.text = content;
+            speech.rate = 1; // Normal speed
+            speech.pitch = 1; // Normal pitch
+
+            // Split content into words for highlighting
+            wordsArray = content.split(/\s+/);
+
+            speech.onboundary = function(event) {
+                const currentWordIndex = event.charIndex;  // Get the current word index
+                const wordStartIndex = content.lastIndexOf(" ", currentWordIndex - 1) + 1;
+                const wordEndIndex = content.indexOf(" ", currentWordIndex) || content.length;
+
+                // Find the word that is being spoken and highlight it
+                const spokenWord = content.substring(wordStartIndex, wordEndIndex).trim();
+                const wordIndex = wordsArray.indexOf(spokenWord);
+
+                highlightText(wordIndex); // Highlight the current word
+            };
+
+            speech.onend = function() {
+                // Once the speech ends, reset the highlighted index
+                highlightText(-1);
+            };
+
+            // Start speaking the content
+            window.speechSynthesis.speak(speech);
+        }
+
+        document.querySelector('form[action="/extract"]').onsubmit = function(e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+            fetch('/extract', {
+                method: 'POST',
+                body: formData
+            }).then(response => response.json()).then(data => {
+                if (data.content) {
+                    contentText = data.content;
+                    wordsArray = contentText.split(/\s+/); // Split into words
+                    document.getElementById('content').value = contentText;
+                    document.getElementById('content-display').innerText = contentText;
+                } else {
+                    alert("No content extracted!");
+                }
+            });
+        };
+
+        document.getElementById('talk-form').onsubmit = function(e) {
+            e.preventDefault();
+            var content = document.getElementById('content').value;
+
+            // Use speech synthesis to speak the content
+            speakContent(content);
+        };
+    </script>
+</body>
+</html>

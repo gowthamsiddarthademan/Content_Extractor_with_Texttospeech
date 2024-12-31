@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extracted Content</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .highlight {
+            background-color: yellow;
+        }
+        .content-display {
+            white-space: pre-wrap;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-top: 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Extracted Content</h1>
+        <div id="content" class="content-display">
+            {{ content | safe }}
+        </div>
+        <button id="talkButton" class="btn">Talk</button>
+        <a href="/" class="btn">Back to Home</a>
+    </div>
+
+    <script>
+        document.getElementById('talkButton').addEventListener('click', function() {
+            let content = document.getElementById('content').innerText;
+            fetch("/talk", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ content: content })
+            });
+
+            // Highlight text while it's being read
+            let lines = content.split("\n");
+            let currentLine = 0;
+            let interval = setInterval(function() {
+                if (currentLine < lines.length) {
+                    let allText = document.getElementById("content").innerText.split("\n");
+                    let highlightedText = allText.map((line, index) => index === currentLine ? `<span class="highlight">${line}</span>` : line).join("\n");
+                    document.getElementById("content").innerHTML = highlightedText;
+                    currentLine++;
+                } else {
+                    clearInterval(interval);  // Stop when all text is highlighted
+                }
+            }, 2000); // Adjust the interval time as per your speech speed
+        });
+    </script>
+</body>
+</html>
